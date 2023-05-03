@@ -23,7 +23,8 @@ Measurement=Base.classes.measurement
 Station= Base.classes.station
 
 # Create our session (link) from Python to the DB
-# session=Session(bind=engine)
+
+#done in each route
 
 #################################################
 # Flask Setup
@@ -89,15 +90,30 @@ def tobs():
     
     return jsonify(results)
 
+#For a specified start, calculate TMIN, TAVG, and TMAX for all the dates greater than or equal to the start date.
+#For a specified start date and end date, calculate TMIN, TAVG, and TMAX for the dates from the start date to the end date, inclusive.
 @app.route('/api/v1.0/<start>')
-def start():
-    session=Session(bind=engine)
-    
-    
-    
 @app.route('/api/v1.0/<start>/<end>')
-def start_end():
+def start_end(start=None,end=None):
     session=Session(bind=engine)
+    #if no end date is put into the URL, follow this path
+    if not end:
+        temp_data=session.query(func.min(Measurement.tobs),func.max(Measurement.tobs),func.avg(Measurement.tobs)).\
+        filter(Measurement.date>=start).\
+        filter(Measurement.date<=dt.date(2017,8,18)).all()
+        
+        temps=list(np.ravel(temp_data))
+        session.close()
+        return jsonify(temps)
+    #if both start and end date are put into URL, follow this path
+    temp_data=session.query(func.min(Measurement.tobs),func.max(Measurement.tobs),func.avg(Measurement.tobs)).\
+        filter(Measurement.date>=start).\
+        filter(Measurement.date<=end).all()
     
+    temps=list(np.ravel(temp_data))
+    session.close()
+    return jsonify(temps)
+
+
 if __name__ == "__main__" :
     app.run(debug=True)
